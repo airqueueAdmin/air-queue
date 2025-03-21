@@ -157,6 +157,8 @@ export default function Home() {
   }, [flights, searchTerm, showDelayedFlights]);
 
   const paginatedFlights = useMemo(() => {
+    if (!filteredFlights) return [];
+
     const initialTotalPages = Math.ceil(filteredFlights.length / ITEMS_PER_PAGE);
     const lastPageItemCount = filteredFlights.length % ITEMS_PER_PAGE;
     const adjustedTotalPages = initialTotalPages > 1 && lastPageItemCount <= 5 && lastPageItemCount > 0 ? initialTotalPages - 1 : initialTotalPages;
@@ -174,6 +176,10 @@ export default function Home() {
   }, [filteredFlights, currentPage]);
 
   useEffect(() => {
+    if (!filteredFlights) {
+      setTotalPages(1);
+      return;
+    }
     const initialTotalPages = Math.ceil(filteredFlights.length / ITEMS_PER_PAGE);
     const lastPageItemCount = filteredFlights.length % ITEMS_PER_PAGE;
 
@@ -186,21 +192,25 @@ export default function Home() {
   }, [filteredFlights]);
 
   useEffect(() => {
-    setLoading(true);
-    fetchFlightData(selectedTerminal, searchTerm)
-      .then((data) => {
-        setFlights(data);
-        setLoading(false);
-        setTotalPages(Math.ceil(data.length / ITEMS_PER_PAGE)); // 총 페이지 수 계산
-        setCurrentPage(1); // 데이터 로드 후 첫 페이지로 설정
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, [selectedTerminal, searchTerm]); // selectedTerminal이 변경될 때마다 useEffect 실행
-
-
+  setLoading(true);
+  fetchFlightData(selectedTerminal, searchTerm)
+    .then((data) => {
+      setFlights(data);
+      setLoading(false);
+      const initialTotalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+      const lastPageItemCount = data.length % ITEMS_PER_PAGE;
+      if (initialTotalPages > 1 && lastPageItemCount <= 5 && lastPageItemCount > 0) {
+        setTotalPages(initialTotalPages - 1);
+      } else {
+        setTotalPages(initialTotalPages);
+      }
+      setCurrentPage(1); // 데이터 로드 후 첫 페이지로 설정
+    })
+    .catch((err) => {
+      setError(err.message);
+      setLoading(false);
+    });
+}, [selectedTerminal, searchTerm]); // selectedTerminal이 변경될 때마다 useEffect 실행
   
   if (loading) return <p className="text-center py-4">Loading flight data...</p>;
   if (error) return <p className="text-red-500 text-center py-4">Error loading flight data: {error}</p>;
